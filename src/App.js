@@ -1,479 +1,295 @@
 import React, { useEffect, useState } from "react";
-import { db } from "./firebase"; // pastikan konfigurasi Firebase sudah benar
 import {
-  collection,
-  getDocs,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  doc,
-  query,
-  where,
-  serverTimestamp,
-  orderBy,
-} from "firebase/firestore";
-import { PencilIcon, TrashIcon } from "@heroicons/react/24/outline";
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Link,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
+import { auth } from "./firebase";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+
+import { FaSun, FaMoon, FaInstagram } from "react-icons/fa";
+
+import ClipLoader from "react-spinners/ClipLoader";
+
+import ProductList from "./ProductList";
+import AddProduct from "./AddProduct";
+import Dashboard from "./Dashboard";
+import Login from "./Login";
+import PriceList from "./PriceList";
+
+import logo from "./logo.png";
+
+function Navbar({ user, darkMode, toggleDarkMode, menuOpen, setMenuOpen, openLogoutModal, handleLinkClick }) {
+  const location = useLocation();
+
+  // Jangan tampilkan menu selain 'Daftar Harga Produk Kami' jika di route /price-list
+  const isPriceListPage = location.pathname === "/price-list";
+
+  return (
+    <nav className="bg-indigo-600 dark:bg-gray-800 text-white p-4 flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <img src={logo} alt="Jeyo Store Logo" className="w-8 h-8" />
+        <Link to="/dashboard" onClick={handleLinkClick} className="text-lg font-semibold">
+          Jeyo Store
+        </Link>
+
+        <button
+          onClick={toggleDarkMode}
+          className="ml-4 flex items-center gap-1 text-sm bg-indigo-700 dark:bg-gray-700 px-2 py-1 rounded hover:bg-indigo-800 dark:hover:bg-gray-600 transition"
+          aria-label="Toggle Dark Mode"
+        >
+          {darkMode ? <FaSun /> : <FaMoon />}
+          <span>Dark Mode</span>
+        </button>
+      </div>
+
+      <button
+        className="sm:hidden block p-2 focus:outline-none"
+        onClick={() => setMenuOpen(!menuOpen)}
+        aria-label="Toggle menu"
+      >
+        <svg
+          className="w-6 h-6"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          {menuOpen ? (
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          ) : (
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          )}
+        </svg>
+      </button>
+
+      <div className="hidden sm:flex gap-6 items-center">
+        {/* Jika halaman daftar harga, tampilkan hanya link ini tengah-tengah */}
+        {isPriceListPage ? (
+          <div className="mx-auto font-semibold text-lg">Daftar Harga Produk Kami</div>
+        ) : (
+          <>
+            <Link to="/dashboard" className="hover:underline" onClick={handleLinkClick}>
+              Dashboard
+            </Link>
+            <Link to="/" className="hover:underline" onClick={handleLinkClick}>
+              Daftar Produk & Penjualan
+            </Link>
+            <Link to="/add-product" className="hover:underline" onClick={handleLinkClick}>
+              Tambah Produk
+            </Link>
+            <Link to="/price-list" className="hover:underline" onClick={handleLinkClick}>
+              Daftar Harga Produk Kami
+            </Link>
+            {user ? (
+              <button
+                onClick={openLogoutModal}
+                className="bg-red-600 px-3 py-1 rounded hover:bg-red-700"
+              >
+                Logout
+              </button>
+            ) : (
+              <Link to="/login" className="hover:underline" onClick={handleLinkClick}>
+                Login
+              </Link>
+            )}
+          </>
+        )}
+      </div>
+
+      {menuOpen && (
+        <>
+          <div
+            className="fixed inset-0 bg-black bg-opacity-30 z-40"
+            onClick={() => setMenuOpen(false)}
+          />
+          <div className="sm:hidden bg-indigo-600 dark:bg-gray-800 text-white flex flex-col p-4 gap-4 z-50 fixed top-16 right-0 left-0 shadow-lg transition-transform duration-300 ease-in-out">
+            {/* Sama untuk menu mobile */}
+            {isPriceListPage ? (
+              <div className="mx-auto font-semibold text-lg">Daftar Harga Produk Kami</div>
+            ) : (
+              <>
+                <Link to="/dashboard" className="hover:text-indigo-200" onClick={handleLinkClick}>
+                  Dashboard
+                </Link>
+                <Link to="/" className="hover:text-indigo-200" onClick={handleLinkClick}>
+                  Daftar Produk & Penjualan
+                </Link>
+                <Link to="/add-product" className="hover:text-indigo-200" onClick={handleLinkClick}>
+                  Tambah Produk
+                </Link>
+                <Link to="/price-list" className="hover:text-indigo-200" onClick={handleLinkClick}>
+                  Daftar Harga Produk Kami
+                </Link>
+                {user ? (
+                  <button
+                    onClick={openLogoutModal}
+                    className="bg-red-600 px-3 py-1 rounded hover:bg-red-700 text-left"
+                  >
+                    Logout
+                  </button>
+                ) : (
+                  <Link to="/login" className="hover:text-indigo-200" onClick={handleLinkClick}>
+                    Login
+                  </Link>
+                )}
+              </>
+            )}
+          </div>
+        </>
+      )}
+    </nav>
+  );
+}
 
 export default function App() {
-  // States
-  const [products, setProducts] = useState([]);
-  const [sales, setSales] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Form states produk
-  const [productName, setProductName] = useState("");
-  const [productStock, setProductStock] = useState("");
-  const [productPrice, setProductPrice] = useState("");
-  const [editingProductId, setEditingProductId] = useState(null);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [errorLogout, setErrorLogout] = useState(null);
 
-  // Form states penjualan
-  const [saleProductId, setSaleProductId] = useState("");
-  const [saleQty, setSaleQty] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
 
-  // Modal hapus
-  const [modalDelete, setModalDelete] = useState({ isOpen: false, type: "", id: null });
-
-  // Load data produk
-  async function fetchProducts() {
-    const q = query(collection(db, "products"), orderBy("name", "asc"));
-    const snapshot = await getDocs(q);
-    const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-    setProducts(items);
-  }
-
-  // Load data penjualan
-  async function fetchSales() {
-    const q = query(collection(db, "sales"), orderBy("soldAt", "desc"));
-    const snapshot = await getDocs(q);
-    const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-    setSales(items);
-  }
-
-  // Load semua saat mount
   useEffect(() => {
-    fetchProducts();
-    fetchSales();
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
+
+    const savedMode = localStorage.getItem("darkMode") === "true";
+    setDarkMode(savedMode);
+    if (savedMode) {
+      document.documentElement.classList.add("dark");
+    }
+
+    return () => unsubscribe();
   }, []);
 
-  // Reset form produk
-  function resetProductForm() {
-    setProductName("");
-    setProductStock("");
-    setProductPrice("");
-    setEditingProductId(null);
-  }
-
-  // Tambah atau edit produk
-  async function handleAddOrEditProduct(e) {
-    e.preventDefault();
-    if (!productName.trim() || productStock === "" || productPrice === "") {
-      alert("Mohon isi semua data produk dengan benar.");
-      return;
+  const toggleDarkMode = () => {
+    const newMode = !darkMode;
+    setDarkMode(newMode);
+    if (newMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
     }
+    localStorage.setItem("darkMode", newMode);
+  };
 
-    setLoading(true);
+  const openLogoutModal = () => {
+    setErrorLogout(null);
+    setShowLogoutModal(true);
+    setMenuOpen(false);
+  };
 
+  const closeLogoutModal = () => {
+    setShowLogoutModal(false);
+  };
+
+  const handleLogoutConfirmed = async () => {
+    setLoggingOut(true);
+    setErrorLogout(null);
     try {
-      if (editingProductId) {
-        // Update produk
-        const productRef = doc(db, "products", editingProductId);
-        await updateDoc(productRef, {
-          name: productName.trim(),
-          stock: Number(productStock),
-          price: Number(productPrice),
-        });
-      } else {
-        // Tambah produk baru
-        await addDoc(collection(db, "products"), {
-          name: productName.trim(),
-          stock: Number(productStock),
-          price: Number(productPrice),
-        });
-      }
-      resetProductForm();
-      fetchProducts();
-    } catch (err) {
-      alert("Gagal menyimpan produk: " + err.message);
+      await signOut(auth);
+      setShowLogoutModal(false);
+    } catch (error) {
+      setErrorLogout("Gagal logout. Coba lagi.");
     } finally {
-      setLoading(false);
+      setLoggingOut(false);
     }
-  }
+  };
 
-  // Mulai edit produk (isi form)
-  function startEditProduct(product) {
-    setEditingProductId(product.id);
-    setProductName(product.name);
-    setProductStock(product.stock);
-    setProductPrice(product.price);
-  }
+  const handleLinkClick = () => {
+    setMenuOpen(false);
+  };
 
-  // Hapus produk
-  async function handleDeleteProduct(id) {
-    setModalDelete({ isOpen: false, type: "", id: null });
-    setLoading(true);
-    try {
-      await deleteDoc(doc(db, "products", id));
-
-      // Hapus juga penjualan terkait produk ini (optional)
-      const salesQuery = query(collection(db, "sales"), where("productId", "==", id));
-      const salesSnapshot = await getDocs(salesQuery);
-      const batchDeletes = salesSnapshot.docs.map((docSnap) => deleteDoc(doc(db, "sales", docSnap.id)));
-      await Promise.all(batchDeletes);
-
-      fetchProducts();
-      fetchSales();
-    } catch (err) {
-      alert("Gagal menghapus produk: " + err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // Catat penjualan
-  async function handleSale(e) {
-    e.preventDefault();
-    if (!saleProductId || saleQty === "") {
-      alert("Pilih produk dan isi jumlah penjualan.");
-      return;
-    }
-    const product = products.find((p) => p.id === saleProductId);
-    if (!product) {
-      alert("Produk tidak ditemukan.");
-      return;
-    }
-    if (product.stock < Number(saleQty)) {
-      alert(`Stok tidak cukup. Stok tersedia: ${product.stock}`);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // Tambah penjualan
-      await addDoc(collection(db, "sales"), {
-        productId: saleProductId,
-        qty: Number(saleQty),
-        soldAt: serverTimestamp(),
-      });
-
-      // Update stok produk
-      const productRef = doc(db, "products", saleProductId);
-      await updateDoc(productRef, {
-        stock: product.stock - Number(saleQty),
-      });
-
-      setSaleProductId("");
-      setSaleQty("");
-      fetchProducts();
-      fetchSales();
-    } catch (err) {
-      alert("Gagal mencatat penjualan: " + err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // Hapus penjualan
-  async function handleDeleteSale(id) {
-    setModalDelete({ isOpen: false, type: "", id: null });
-    setLoading(true);
-    try {
-      const saleRef = doc(db, "sales", id);
-      // Cari data penjualan utk rollback stok produk
-      const saleSnap = await saleRef.get();
-      const saleData = saleSnap.data();
-
-      if (saleData) {
-        // Kembalikan stok produk
-        const productRef = doc(db, "products", saleData.productId);
-        const productSnap = await productRef.get();
-        const productData = productSnap.data();
-        if (productData) {
-          await updateDoc(productRef, {
-            stock: productData.stock + saleData.qty,
-          });
-        }
-      }
-
-      await deleteDoc(saleRef);
-      fetchProducts();
-      fetchSales();
-    } catch (err) {
-      alert("Gagal menghapus penjualan: " + err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // Hitung total pendapatan
-  function calculateTotalIncome() {
-    let total = 0;
-    for (const sale of sales) {
-      const product = products.find((p) => p.id === sale.productId);
-      if (product) total += sale.qty * product.price;
-    }
-    return total;
-  }
-
-  // Format tanggal
-  function formatDate(timestamp) {
-    if (!timestamp) return "";
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleDateString("id-ID", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <ClipLoader color="#4F46E5" loading={loading} size={60} />
+      </div>
+    );
   }
 
   return (
     <>
-      <link
-        href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap"
-        rel="stylesheet"
-      />
-      <div
-        className="min-h-screen bg-indigo-50 p-5 font-poppins text-indigo-900"
-        style={{ fontFamily: "'Poppins', sans-serif" }}
-      >
-        <header className="mb-8 text-center">
-          <h1 className="text-4xl font-extrabold text-indigo-700">Jeyo Store Official</h1>
-          <p className="text-indigo-500 mt-1 italic font-light text-sm">
-            
-          </p>
-        </header>
+      <Router>
+        <Navbar
+          user={user}
+          darkMode={darkMode}
+          toggleDarkMode={toggleDarkMode}
+          menuOpen={menuOpen}
+          setMenuOpen={setMenuOpen}
+          openLogoutModal={openLogoutModal}
+          handleLinkClick={handleLinkClick}
+        />
 
-        {/* Form Penjualan */}
-        <section className="mb-8 bg-white rounded-2xl p-6 shadow-md border border-indigo-300">
-          <h2 className="text-2xl font-semibold text-indigo-600 mb-4 border-b border-indigo-400 pb-2">
-            Catat Penjualan
-          </h2>
-          <form onSubmit={handleSale} className="flex flex-col gap-4">
-            <select
-              value={saleProductId}
-              onChange={(e) => setSaleProductId(e.target.value)}
-              className="bg-indigo-50 border border-indigo-300 rounded-xl px-4 py-3 text-indigo-700 text-base focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              disabled={loading}
-            >
-              <option value="">-- Pilih Produk --</option>
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} (Stok: {p.stock})
-                </option>
-              ))}
-            </select>
-
-            <input
-              type="number"
-              min={1}
-              value={saleQty}
-              onChange={(e) => setSaleQty(e.target.value)}
-              placeholder="Jumlah Terjual"
-              className="bg-indigo-50 border border-indigo-300 rounded-xl px-4 py-3 text-indigo-700 text-base placeholder-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              disabled={loading}
-            />
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="bg-indigo-600 text-white rounded-xl py-3 text-lg font-semibold shadow hover:bg-indigo-700 transition disabled:opacity-60"
-            >
-              Catat Penjualan
-            </button>
-          </form>
-        </section>
-
-        {/* Form Produk */}
-        <section className="mb-8 bg-white rounded-2xl p-6 shadow-md border border-indigo-300">
-          <h2 className="text-2xl font-semibold text-indigo-600 mb-4 border-b border-indigo-400 pb-2">
-            {editingProductId ? "Edit Produk" : "Tambah Produk"}
-          </h2>
-          <form onSubmit={handleAddOrEditProduct} autoComplete="off" className="flex flex-col gap-4">
-            <input
-              type="text"
-              value={productName}
-              onChange={(e) => setProductName(e.target.value)}
-              placeholder="Nama Produk"
-              className="bg-indigo-50 border border-indigo-300 rounded-xl px-4 py-3 text-indigo-700 text-base placeholder-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              disabled={loading}
-            />
-            <input
-              type="number"
-              min={0}
-              value={productStock}
-              onChange={(e) => setProductStock(e.target.value)}
-              placeholder="Stok"
-              className="bg-indigo-50 border border-indigo-300 rounded-xl px-4 py-3 text-indigo-700 text-base placeholder-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              disabled={loading}
-            />
-            <input
-              type="number"
-              min={0}
-              value={productPrice}
-              onChange={(e) => setProductPrice(e.target.value)}
-              placeholder="Harga"
-              className="bg-indigo-50 border border-indigo-300 rounded-xl px-4 py-3 text-indigo-700 text-base placeholder-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              disabled={loading}
-            />
-            <div className="flex gap-4">
-              {editingProductId && (
-                <button
-                  type="button"
-                  onClick={resetProductForm}
-                  disabled={loading}
-                  className="flex-grow bg-gray-300 text-indigo-700 py-3 rounded-xl font-semibold hover:bg-gray-400 transition"
-                >
-                  Batal Edit
-                </button>
-              )}
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex-grow bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 transition disabled:opacity-60"
-              >
-                {editingProductId ? "Simpan Perubahan" : "Tambah Produk"}
-              </button>
-            </div>
-          </form>
-        </section>
-
-        {/* List Produk */}
-        <section className="mb-8">
-          <h2 className="text-2xl font-semibold text-indigo-700 mb-4">Data Produk</h2>
-          {products.length === 0 ? (
-            <p className="text-indigo-400 italic text-center">Tidak ada produk</p>
-          ) : (
-            <div className="space-y-4">
-              {products.map((p) => (
-                <div
-                  key={p.id}
-                  className="bg-white rounded-2xl p-5 shadow-md border border-indigo-300 flex justify-between items-center"
-                >
-                  <div>
-                    <h3 className="font-semibold text-lg text-indigo-800">{p.name}</h3>
-                    <p className="text-indigo-600 font-mono">Stok: {p.stock}</p>
-                    <p className="text-indigo-700 font-mono">
-                      Harga:{" "}
-                      {p.price.toLocaleString("id-ID", {
-                        style: "currency",
-                        currency: "IDR",
-                      })}
-                    </p>
-                  </div>
-                  <div className="flex gap-4">
-                    <button
-                      onClick={() => startEditProduct(p)}
-                      title="Edit Produk"
-                      className="text-indigo-600 hover:text-indigo-900 transition"
-                      disabled={loading}
-                    >
-                      <PencilIcon className="w-6 h-6" />
-                    </button>
-                    <button
-                      onClick={() => setModalDelete({ isOpen: true, type: "product", id: p.id })}
-                      title="Hapus Produk"
-                      className="text-red-500 hover:text-red-700 transition"
-                      disabled={loading}
-                    >
-                      <TrashIcon className="w-6 h-6" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* List Penjualan */}
-        <section className="mb-8">
-          <h2 className="text-2xl font-semibold text-indigo-700 mb-4">Data Penjualan</h2>
-          {sales.length === 0 ? (
-            <p className="text-indigo-400 italic text-center">Belum ada penjualan</p>
-          ) : (
-            <div className="space-y-4">
-              {sales.map((sale) => {
-                const product = products.find((p) => p.id === sale.productId);
-                return (
-                  <div
-                    key={sale.id}
-                    className="bg-white rounded-2xl p-5 shadow-md border border-indigo-300 flex justify-between items-center"
-                  >
-                    <div>
-                      <h3 className="font-semibold text-lg text-indigo-800">
-                        {product ? product.name : "(Produk Terhapus)"}
-                      </h3>
-                      <p className="text-indigo-600 font-mono">Jumlah: {sale.qty}</p>
-                      <p className="text-indigo-700 font-mono">Tanggal: {formatDate(sale.soldAt)}</p>
-                    </div>
-                    <button
-                      onClick={() => setModalDelete({ isOpen: true, type: "sale", id: sale.id })}
-                      title="Hapus Penjualan"
-                      className="text-red-500 hover:text-red-700 transition"
-                      disabled={loading}
-                    >
-                      <TrashIcon className="w-6 h-6" />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
-
-        {/* Total Pendapatan */}
-        <div className="text-center text-indigo-700 font-extrabold text-xl mb-8">
-          Total Pendapatan:{" "}
-          <span className="text-green-600">
-            {calculateTotalIncome().toLocaleString("id-ID", {
-              style: "currency",
-              currency: "IDR",
-            })}
-          </span>
-        </div>
-
-        {/* Modal Hapus */}
-        {modalDelete.isOpen && (
-          <div
-            className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50"
-            onClick={() => setModalDelete({ isOpen: false, type: "", id: null })}
-          >
-            <div
-              className="bg-white rounded-xl p-6 max-w-xs w-full"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h3 className="text-lg font-semibold text-indigo-700 mb-4">
-                Konfirmasi Hapus
-              </h3>
-              <p className="mb-6 text-indigo-600">
-                Apakah Anda yakin ingin menghapus{" "}
-                {modalDelete.type === "product" ? "produk ini" : "data penjualan ini"}?
-              </p>
-              <div className="flex justify-end gap-4">
-                <button
-                  onClick={() => setModalDelete({ isOpen: false, type: "", id: null })}
-                  className="px-4 py-2 rounded-xl bg-gray-300 font-semibold text-indigo-700 hover:bg-gray-400 transition"
-                >
-                  Batal
-                </button>
-                <button
-                  onClick={async () => {
-                    if (modalDelete.type === "product") {
-                      await handleDeleteProduct(modalDelete.id);
-                    } else if (modalDelete.type === "sale") {
-                      await handleDeleteSale(modalDelete.id);
-                    }
-                  }}
-                  className="px-4 py-2 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition"
-                  disabled={loading}
-                >
-                  Hapus
-                </button>
-              </div>
-            </div>
+        {user && (
+          <div className="bg-green-100 text-green-800 p-4 text-center font-medium">
+            Selamat datang di data admin penjualan <span className="font-bold">Jeyo Store</span>
           </div>
         )}
-      </div>
+
+        <main className="pb-16">
+          <Routes>
+            <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
+            <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/login" />} />
+            <Route path="/add-product" element={user ? <AddProduct /> : <Navigate to="/login" />} />
+            <Route path="/" element={user ? <ProductList /> : <Navigate to="/login" />} />
+            {/* Halaman daftar harga terbuka tanpa login */}
+            <Route path="/price-list" element={<PriceList />} />
+          </Routes>
+        </main>
+      </Router>
+
+      {showLogoutModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white rounded p-6 w-80 shadow-lg">
+            <h2 className="text-lg font-semibold mb-4">Konfirmasi Logout</h2>
+            {errorLogout && (
+              <div className="bg-red-100 text-red-700 p-2 mb-4 rounded">
+                {errorLogout}
+              </div>
+            )}
+            <p className="mb-6">Apakah Anda yakin ingin logout?</p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={closeLogoutModal}
+                className="px-4 py-2 rounded border border-gray-300 hover:bg-gray-100"
+                disabled={loggingOut}
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleLogoutConfirmed}
+                className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 disabled:bg-red-400"
+                disabled={loggingOut}
+              >
+                {loggingOut ? "Logging out..." : "Logout"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <footer className="fixed bottom-0 left-0 w-full bg-indigo-700 dark:bg-gray-900 text-white flex items-center justify-center gap-3 py-2 px-4 shadow-lg z-50 select-none">
+        <a
+          href="https://instagram.com/jeyoofficial.store"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 hover:text-pink-400 transition-transform transform hover:scale-110"
+          aria-label="Instagram Jeyo Store"
+        >
+          <FaInstagram className="w-6 h-6" />
+          <span className="font-medium">Follow us on Instagram @jeyoofficial.store</span>
+        </a>
+      </footer>
     </>
   );
 }
