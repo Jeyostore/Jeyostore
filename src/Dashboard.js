@@ -14,8 +14,6 @@ import {
 
 export default function Dashboard() {
   const [products, setProducts] = useState([]);
-  // Hapus state sales karena tidak digunakan langsung di render
-  // const [sales, setSales] = useState([]);
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [totalStock, setTotalStock] = useState(0);
   const [salesPerMonth, setSalesPerMonth] = useState([]);
@@ -33,13 +31,12 @@ export default function Dashboard() {
     }));
     setProducts(productsData);
 
-    // Ambil sales (disimpan lokal saja, tidak perlu setSales)
+    // Ambil sales
     const salesSnapshot = await getDocs(collection(db, "sales"));
     const salesData = salesSnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
     }));
-    // setSales(salesData);  // dihapus
 
     // Hitung total pendapatan
     let revenue = 0;
@@ -50,7 +47,7 @@ export default function Dashboard() {
     setTotalRevenue(revenue);
 
     // Hitung total stok
-    const stock = productsData.reduce((acc, p) => acc + p.stock, 0);
+    const stock = productsData.reduce((acc, p) => acc + (p.stock || 0), 0);
     setTotalStock(stock);
 
     // Hitung penjualan per bulan (tahun ini)
@@ -74,21 +71,23 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
-      <h1 className="text-4xl font-bold mb-8 text-indigo-700">Dashboard</h1>
+    <div className="max-w-5xl mx-auto p-4 sm:p-6">
+      <h1 className="text-3xl sm:text-4xl font-bold mb-8 text-indigo-700 text-center sm:text-left">
+        Dashboard
+      </h1>
 
-      <div className="grid grid-cols-3 gap-6 mb-10">
-        <div className="bg-indigo-100 p-6 rounded-xl shadow-md">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+        <div className="bg-indigo-100 p-4 rounded-xl shadow-md">
           <h2 className="text-lg font-semibold mb-2">Total Produk</h2>
           <p className="text-3xl font-bold">{products.length}</p>
         </div>
 
-        <div className="bg-indigo-100 p-6 rounded-xl shadow-md">
+        <div className="bg-indigo-100 p-4 rounded-xl shadow-md">
           <h2 className="text-lg font-semibold mb-2">Total Stok</h2>
           <p className="text-3xl font-bold">{totalStock}</p>
         </div>
 
-        <div className="bg-indigo-100 p-6 rounded-xl shadow-md">
+        <div className="bg-indigo-100 p-4 rounded-xl shadow-md">
           <h2 className="text-lg font-semibold mb-2">Total Pendapatan</h2>
           <p className="text-3xl font-bold">
             Rp {totalRevenue.toLocaleString("id-ID")}
@@ -96,13 +95,15 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Grafik penjualan per bulan */}
-      <div className="bg-white p-6 rounded-xl shadow-md">
+      <div className="bg-white p-4 rounded-xl shadow-md">
         <h2 className="text-2xl font-semibold mb-4 text-indigo-700">
           Penjualan Bulanan (Qty)
         </h2>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={salesPerMonth} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+          <BarChart
+            data={salesPerMonth}
+            margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
+          >
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="month" />
             <YAxis allowDecimals={false} />

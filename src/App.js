@@ -24,8 +24,6 @@ import logo from "./logo.png";
 
 function Navbar({ user, darkMode, toggleDarkMode, menuOpen, setMenuOpen, openLogoutModal, handleLinkClick }) {
   const location = useLocation();
-
-  // Jangan tampilkan menu selain 'Daftar Harga Produk Kami' jika di route /price-list
   const isPriceListPage = location.pathname === "/price-list";
 
   return (
@@ -36,13 +34,13 @@ function Navbar({ user, darkMode, toggleDarkMode, menuOpen, setMenuOpen, openLog
           Jeyo Store
         </Link>
 
+        {/* Tombol Dark Mode: icon only di mobile, full text di desktop */}
         <button
           onClick={toggleDarkMode}
-          className="ml-4 flex items-center gap-1 text-sm bg-indigo-700 dark:bg-gray-700 px-2 py-1 rounded hover:bg-indigo-800 dark:hover:bg-gray-600 transition"
+          className="ml-2 p-2 rounded bg-indigo-700 dark:bg-gray-700 hover:bg-indigo-800 dark:hover:bg-gray-600 transition sm:flex hidden"
           aria-label="Toggle Dark Mode"
         >
           {darkMode ? <FaSun /> : <FaMoon />}
-          <span>Dark Mode</span>
         </button>
       </div>
 
@@ -66,8 +64,8 @@ function Navbar({ user, darkMode, toggleDarkMode, menuOpen, setMenuOpen, openLog
         </svg>
       </button>
 
+      {/* Menu desktop */}
       <div className="hidden sm:flex gap-6 items-center">
-        {/* Jika halaman daftar harga, tampilkan hanya link ini tengah-tengah */}
         {isPriceListPage ? (
           <div className="mx-auto font-semibold text-lg">Daftar Harga Produk Kami</div>
         ) : (
@@ -100,14 +98,14 @@ function Navbar({ user, darkMode, toggleDarkMode, menuOpen, setMenuOpen, openLog
         )}
       </div>
 
+      {/* Menu mobile */}
       {menuOpen && (
         <>
           <div
             className="fixed inset-0 bg-black bg-opacity-30 z-40"
             onClick={() => setMenuOpen(false)}
           />
-          <div className="sm:hidden bg-indigo-600 dark:bg-gray-800 text-white flex flex-col p-4 gap-4 z-50 fixed top-16 right-0 left-0 shadow-lg transition-transform duration-300 ease-in-out">
-            {/* Sama untuk menu mobile */}
+          <div className="sm:hidden bg-indigo-600 dark:bg-gray-800 text-white flex flex-col p-4 gap-4 z-50 fixed top-16 right-4 left-4 mx-auto rounded-lg shadow-lg transition-transform duration-300 ease-in-out">
             {isPriceListPage ? (
               <div className="mx-auto font-semibold text-lg">Daftar Harga Produk Kami</div>
             ) : (
@@ -236,7 +234,8 @@ export default function App() {
           </div>
         )}
 
-        <main className="pb-16">
+        {/* Padding bawah lebih besar di mobile agar konten tidak tertutup footer */}
+        <main className="pb-28 sm:pb-16">
           <Routes>
             <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
             <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/login" />} />
@@ -253,32 +252,30 @@ export default function App() {
           <div className="bg-white rounded p-6 w-80 shadow-lg">
             <h2 className="text-lg font-semibold mb-4">Konfirmasi Logout</h2>
             {errorLogout && (
-              <div className="bg-red-100 text-red-700 p-2 mb-4 rounded">
-                {errorLogout}
-              </div>
+              <div className="bg-red-200 text-red-700 p-2 mb-3 rounded">{errorLogout}</div>
             )}
-            <p className="mb-6">Apakah Anda yakin ingin logout?</p>
+            <p className="mb-4">Apakah Anda yakin ingin logout?</p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={closeLogoutModal}
-                className="px-4 py-2 rounded border border-gray-300 hover:bg-gray-100"
+                className="px-3 py-1 rounded border border-gray-400 hover:bg-gray-100"
                 disabled={loggingOut}
               >
                 Batal
               </button>
               <button
                 onClick={handleLogoutConfirmed}
-                className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 disabled:bg-red-400"
+                className="px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700"
                 disabled={loggingOut}
               >
-                {loggingOut ? "Logging out..." : "Logout"}
+                {loggingOut ? "Logout..." : "Logout"}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      <footer className="fixed bottom-0 left-0 w-full bg-indigo-700 dark:bg-gray-900 text-white flex items-center justify-center gap-3 py-2 px-4 shadow-lg z-50 select-none">
+      <footer className="fixed bottom-0 left-0 w-full bg-indigo-700 dark:bg-gray-900 text-white flex flex-col sm:flex-row items-center justify-center gap-2 py-3 px-4 text-sm sm:text-base text-center sm:text-left shadow-lg z-50">
         <a
           href="https://instagram.com/jeyoofficial.store"
           target="_blank"
@@ -286,7 +283,7 @@ export default function App() {
           className="flex items-center gap-2 hover:text-pink-400 transition-transform transform hover:scale-110"
           aria-label="Instagram Jeyo Store"
         >
-          <FaInstagram className="w-6 h-6" />
+          <FaInstagram className="w-5 h-5 sm:w-6 sm:h-6" />
           <span className="font-medium">Follow us on Instagram @jeyoofficial.store</span>
         </a>
       </footer>
