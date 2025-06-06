@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext, createContext } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -6,167 +6,168 @@ import {
   Link,
   Navigate,
   useLocation,
+  NavLink, // Menggunakan NavLink untuk active styling
 } from "react-router-dom";
 import { auth } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 
-import { FaSun, FaMoon, FaInstagram } from "react-icons/fa";
+// --- ICONS ---
+import { 
+  FaSun, FaMoon, FaInstagram, FaTachometerAlt, FaBoxOpen, FaPlusCircle, FaSignOutAlt, FaBars, FaTimes, FaUserCircle 
+} from "react-icons/fa";
+import { ChartPieIcon, TableCellsIcon, DocumentPlusIcon, ArrowRightOnRectangleIcon, ArrowLeftOnRectangleIcon, SunIcon, MoonIcon, UserCircleIcon } from "@heroicons/react/24/outline";
+
 
 import ClipLoader from "react-spinners/ClipLoader";
 
+// --- PAGES (Impor seperti biasa) ---
 import ProductList from "./ProductList";
 import AddProduct from "./AddProduct";
 import Dashboard from "./Dashboard";
 import Login from "./Login";
-import PriceList from "./PriceList";
-
 import logo from "./logo.png";
 
-function Navbar({ user, darkMode, toggleDarkMode, menuOpen, setMenuOpen, openLogoutModal, handleLinkClick }) {
-  const location = useLocation();
-  const isPriceListPage = location.pathname === "/price-list";
 
-  return (
-    <nav className="bg-indigo-600 dark:bg-gray-800 text-white p-4 flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <img src={logo} alt="Jeyo Store Logo" className="w-8 h-8" />
-        <Link to="/dashboard" onClick={handleLinkClick} className="text-lg font-semibold">
-          Jeyo Store
-        </Link>
+//=================================================================
+// 1. AUTHENTICATION CONTEXT 
+// (Mengelola state login di seluruh aplikasi)
+//=================================================================
+const AuthContext = createContext();
 
-        {/* Tombol Dark Mode: icon only di mobile, full text di desktop */}
-        <button
-          onClick={toggleDarkMode}
-          className="ml-2 p-2 rounded bg-indigo-700 dark:bg-gray-700 hover:bg-indigo-800 dark:hover:bg-gray-600 transition sm:flex hidden"
-          aria-label="Toggle Dark Mode"
-        >
-          {darkMode ? <FaSun /> : <FaMoon />}
-        </button>
-      </div>
-
-      <button
-        className="sm:hidden block p-2 focus:outline-none"
-        onClick={() => setMenuOpen(!menuOpen)}
-        aria-label="Toggle menu"
-      >
-        <svg
-          className="w-6 h-6"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          {menuOpen ? (
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          ) : (
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          )}
-        </svg>
-      </button>
-
-      {/* Menu desktop */}
-      <div className="hidden sm:flex gap-6 items-center">
-        {isPriceListPage ? (
-          <div className="mx-auto font-semibold text-lg">Daftar Harga Produk Kami</div>
-        ) : (
-          <>
-            <Link to="/dashboard" className="hover:underline" onClick={handleLinkClick}>
-              Dashboard
-            </Link>
-            <Link to="/" className="hover:underline" onClick={handleLinkClick}>
-              Daftar Produk & Penjualan
-            </Link>
-            <Link to="/add-product" className="hover:underline" onClick={handleLinkClick}>
-              Tambah Produk
-            </Link>
-            <Link to="/price-list" className="hover:underline" onClick={handleLinkClick}>
-              Daftar Harga Produk Kami
-            </Link>
-            {user ? (
-              <button
-                onClick={openLogoutModal}
-                className="bg-red-600 px-3 py-1 rounded hover:bg-red-700"
-              >
-                Logout
-              </button>
-            ) : (
-              <Link to="/login" className="hover:underline" onClick={handleLinkClick}>
-                Login
-              </Link>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* Menu mobile */}
-      {menuOpen && (
-        <>
-          <div
-            className="fixed inset-0 bg-black bg-opacity-30 z-40"
-            onClick={() => setMenuOpen(false)}
-          />
-          <div className="sm:hidden bg-indigo-600 dark:bg-gray-800 text-white flex flex-col p-4 gap-4 z-50 fixed top-16 right-4 left-4 mx-auto rounded-lg shadow-lg transition-transform duration-300 ease-in-out">
-            {isPriceListPage ? (
-              <div className="mx-auto font-semibold text-lg">Daftar Harga Produk Kami</div>
-            ) : (
-              <>
-                <Link to="/dashboard" className="hover:text-indigo-200" onClick={handleLinkClick}>
-                  Dashboard
-                </Link>
-                <Link to="/" className="hover:text-indigo-200" onClick={handleLinkClick}>
-                  Daftar Produk & Penjualan
-                </Link>
-                <Link to="/add-product" className="hover:text-indigo-200" onClick={handleLinkClick}>
-                  Tambah Produk
-                </Link>
-                <Link to="/price-list" className="hover:text-indigo-200" onClick={handleLinkClick}>
-                  Daftar Harga Produk Kami
-                </Link>
-                {user ? (
-                  <button
-                    onClick={openLogoutModal}
-                    className="bg-red-600 px-3 py-1 rounded hover:bg-red-700 text-left"
-                  >
-                    Logout
-                  </button>
-                ) : (
-                  <Link to="/login" className="hover:text-indigo-200" onClick={handleLinkClick}>
-                    Login
-                  </Link>
-                )}
-              </>
-            )}
-          </div>
-        </>
-      )}
-    </nav>
-  );
-}
-
-export default function App() {
+function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [loggingOut, setLoggingOut] = useState(false);
-  const [errorLogout, setErrorLogout] = useState(null);
-
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);
     });
+    return () => unsubscribe();
+  }, []);
 
+  const value = { user, loading };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {/* Menampilkan loading global sampai status auth terverifikasi */}
+      {loading ? (
+        <div className="flex justify-center items-center h-screen bg-slate-100 dark:bg-slate-900">
+          <ClipLoader color="#4F46E5" loading={loading} size={60} />
+        </div>
+      ) : (
+        children
+      )}
+    </AuthContext.Provider>
+  );
+}
+
+// Custom hook untuk menggunakan auth context
+const useAuth = () => {
+  return useContext(AuthContext);
+};
+
+
+//=================================================================
+// 2. PROTECTED ROUTE COMPONENT
+// (Melindungi halaman yang butuh login)
+//=================================================================
+function ProtectedRoute({ children }) {
+  const { user } = useAuth();
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+}
+
+
+//=================================================================
+// 3. UI COMPONENTS (Sidebar, Navbar, Layout, dll)
+//=================================================================
+
+// --- Sidebar untuk Desktop ---
+function Sidebar() {
+    const { user } = useAuth();
+
+    const navLinks = [
+        { name: "Dashboard", to: "/dashboard", icon: <ChartPieIcon className="w-6 h-6" /> },
+        { name: "Produk & Penjualan", to: "/", icon: <TableCellsIcon className="w-6 h-6" /> },
+        { name: "Tambah Produk", to: "/add-product", icon: <DocumentPlusIcon className="w-6 h-6" /> },
+    ];
+
+    const NavItem = ({ to, children }) => (
+        <NavLink
+            to={to}
+            end // 'end' prop penting untuk NavLink ke path "/"
+            className={({ isActive }) =>
+                `flex items-center p-3 my-1 rounded-lg transition-colors duration-200 ${
+                isActive
+                    ? "bg-indigo-600 text-white shadow-lg"
+                    : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                }`
+            }
+        >
+            {children}
+        </NavLink>
+    );
+
+    return (
+        <div className="hidden md:flex flex-col w-64 bg-gray-800 dark:bg-gray-900">
+            <div className="flex items-center justify-center h-20 border-b border-gray-700/75">
+                <img src={logo} alt="Jeyo Store Logo" className="w-10 h-10 mr-3" />
+                <h1 className="text-xl font-bold text-white">Jeyo Store</h1>
+            </div>
+            <nav className="flex-1 px-4 py-4">
+                {navLinks.map((link) => (
+                    <NavItem key={link.name} to={link.to}>
+                        {link.icon}
+                        <span className="ml-4 font-medium">{link.name}</span>
+                    </NavItem>
+                ))}
+            </nav>
+            <div className="p-4 border-t border-gray-700/75">
+                <div className="flex items-center">
+                    <UserCircleIcon className="w-10 h-10 text-gray-500"/>
+                    <div className="ml-3">
+                        <p className="text-sm font-semibold text-white">Admin</p>
+                        <p className="text-xs text-gray-400 truncate">{user?.email}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// --- Navbar (terutama untuk Mobile) ---
+function Navbar({ onMenuClick }) {
+    return (
+        <header className="md:hidden flex items-center justify-between bg-white dark:bg-slate-800 h-16 p-4 shadow-md">
+            <div className="flex items-center">
+                <img src={logo} alt="Jeyo Store Logo" className="w-8 h-8" />
+                <span className="text-lg font-bold ml-3 text-gray-800 dark:text-white">Jeyo Store</span>
+            </div>
+            <button onClick={onMenuClick} className="text-gray-600 dark:text-gray-300">
+                <FaBars className="w-6 h-6"/>
+            </button>
+        </header>
+    );
+}
+
+
+// --- Layout Utama (Sidebar + Konten Halaman) ---
+function AppLayout() {
+  const { user } = useAuth();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
     const savedMode = localStorage.getItem("darkMode") === "true";
     setDarkMode(savedMode);
     if (savedMode) {
       document.documentElement.classList.add("dark");
     }
-
-    return () => unsubscribe();
   }, []);
 
   const toggleDarkMode = () => {
@@ -180,113 +181,167 @@ export default function App() {
     localStorage.setItem("darkMode", newMode);
   };
 
-  const openLogoutModal = () => {
-    setErrorLogout(null);
-    setShowLogoutModal(true);
-    setMenuOpen(false);
-  };
-
-  const closeLogoutModal = () => {
-    setShowLogoutModal(false);
-  };
-
-  const handleLogoutConfirmed = async () => {
+  const handleLogout = async () => {
     setLoggingOut(true);
-    setErrorLogout(null);
     try {
       await signOut(auth);
-      setShowLogoutModal(false);
+      // Navigasi akan di-handle oleh ProtectedRoute secara otomatis
     } catch (error) {
-      setErrorLogout("Gagal logout. Coba lagi.");
+      console.error("Logout error", error);
     } finally {
       setLoggingOut(false);
+      setShowLogoutModal(false);
     }
   };
+  
+  const navLinks = [
+    { name: "Dashboard", to: "/dashboard", icon: <ChartPieIcon className="w-5 h-5" /> },
+    { name: "Produk & Penjualan", to: "/", icon: <TableCellsIcon className="w-5 h-5" /> },
+    { name: "Tambah Produk", to: "/add-product", icon: <DocumentPlusIcon className="w-5 h-5" /> },
+  ];
 
-  const handleLinkClick = () => {
-    setMenuOpen(false);
-  };
+  const NavItemMobile = ({ to, children }) => (
+      <NavLink
+          to={to}
+          end
+          onClick={() => setMobileMenuOpen(false)}
+          className={({ isActive }) =>
+              `flex items-center p-3 rounded-lg transition-colors duration-200 ${
+              isActive
+                  ? "bg-indigo-600 text-white"
+                  : "text-gray-300 hover:bg-gray-700"
+              }`
+          }
+      >
+          {children}
+      </NavLink>
+  );
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <ClipLoader color="#4F46E5" loading={loading} size={60} />
-      </div>
-    );
-  }
 
   return (
-    <>
-      <Router>
-        <Navbar
-          user={user}
-          darkMode={darkMode}
-          toggleDarkMode={toggleDarkMode}
-          menuOpen={menuOpen}
-          setMenuOpen={setMenuOpen}
-          openLogoutModal={openLogoutModal}
-          handleLinkClick={handleLinkClick}
-        />
+    <div className="flex h-screen bg-slate-100 dark:bg-slate-900 text-gray-800 dark:text-gray-200">
+      {/* Sidebar untuk Desktop */}
+      <Sidebar />
 
-        {user && (
-          <div className="bg-green-100 text-green-800 p-4 text-center font-medium">
-            Selamat datang di data admin penjualan <span className="font-bold">Jeyo Store</span>
+      {/* Mobile Menu (Overlay) */}
+      <div className={`fixed inset-0 z-40 md:hidden transition-all duration-300 ${mobileMenuOpen ? 'bg-black/60' : 'bg-transparent pointer-events-none'}`} onClick={() => setMobileMenuOpen(false)}>
+        <div className={`absolute top-0 left-0 h-full w-64 bg-gray-800 dark:bg-gray-900 shadow-xl flex flex-col transition-transform duration-300 ease-in-out ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between h-20 p-4 border-b border-gray-700">
+                <span className="text-xl font-bold text-white">Menu</span>
+                <button onClick={() => setMobileMenuOpen(false)} className="text-gray-300 hover:text-white">
+                    <FaTimes className="w-6 h-6"/>
+                </button>
+            </div>
+            <nav className="p-4 flex-1">
+                {navLinks.map(link => (
+                    <NavItemMobile key={link.name} to={link.to}>
+                        {link.icon}
+                        <span className="ml-4">{link.name}</span>
+                    </NavItemMobile>
+                ))}
+            </nav>
+            {/* Footer untuk Logout & Aksi di Mobile */}
+            <div className="p-4 border-t border-gray-700 space-y-2">
+                <button
+                  onClick={toggleDarkMode}
+                  className="flex items-center w-full p-3 rounded-lg text-gray-300 hover:bg-gray-700"
+                >
+                  {darkMode ? <SunIcon className="w-6 h-6" /> : <MoonIcon className="w-6 h-6" />}
+                  <span className="ml-4 font-medium">
+                    {darkMode ? "Mode Terang" : "Mode Gelap"}
+                  </span>
+                </button>
+                <div className="flex items-center pt-2 border-t border-gray-700/50">
+                    <UserCircleIcon className="w-10 h-10 text-gray-500"/>
+                    <div className="ml-3 flex-1 overflow-hidden">
+                        <p className="text-sm font-semibold text-white">Admin</p>
+                        <p className="text-xs text-gray-400 truncate">{user?.email}</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        setShowLogoutModal(true);
+                      }}
+                      className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg"
+                      title="Logout"
+                    >
+                      <ArrowLeftOnRectangleIcon className="w-6 h-6" />
+                    </button>
+                </div>
+            </div>
+        </div>
+      </div>
+      
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Navbar onMenuClick={() => setMobileMenuOpen(true)}/>
+        
+        {/* Konten Utama */}
+        <main className="flex-1 overflow-x-hidden overflow-y-auto">
+          {user && (
+            <div className="hidden md:flex justify-between items-center p-4 border-b dark:border-slate-800 bg-white dark:bg-slate-800">
+                <div>
+                    <h2 className="text-xl font-semibold">Selamat Datang, Admin!</h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Ini adalah ringkasan aktivitas toko Anda.</p>
+                </div>
+                <div className="flex items-center gap-4">
+                    <button onClick={toggleDarkMode} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-slate-700" title="Toggle Dark Mode">
+                      {darkMode ? <SunIcon className="w-6 h-6"/> : <MoonIcon className="w-6 h-6"/>}
+                    </button>
+                    <button onClick={() => setShowLogoutModal(true)} className="flex items-center gap-2 p-2 rounded-lg text-red-500 hover:bg-red-500 hover:text-white transition-colors" title="Logout">
+                      <ArrowLeftOnRectangleIcon className="w-6 h-6"/>
+                      <span className="hidden lg:inline">Logout</span>
+                    </button>
+                </div>
+            </div>
+           )}
+          <div className="p-4 md:p-6">
+            <Routes>
+                <Route path="/" element={<ProtectedRoute><ProductList /></ProtectedRoute>} />
+                <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                <Route path="/add-product" element={<ProtectedRoute><AddProduct /></ProtectedRoute>} />
+                {/* Route login sekarang terpisah */}
+            </Routes>
           </div>
-        )}
-
-        {/* Padding bawah lebih besar di mobile agar konten tidak tertutup footer */}
-        <main className="pb-28 sm:pb-16">
-          <Routes>
-            <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
-            <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/login" />} />
-            <Route path="/add-product" element={user ? <AddProduct /> : <Navigate to="/login" />} />
-            <Route path="/" element={user ? <ProductList /> : <Navigate to="/login" />} />
-            {/* Halaman daftar harga terbuka tanpa login */}
-            <Route path="/price-list" element={<PriceList />} />
-          </Routes>
         </main>
-      </Router>
-
+      </div>
+      
+      {/* Modal Logout */}
       {showLogoutModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-          <div className="bg-white rounded p-6 w-80 shadow-lg">
-            <h2 className="text-lg font-semibold mb-4">Konfirmasi Logout</h2>
-            {errorLogout && (
-              <div className="bg-red-200 text-red-700 p-2 mb-3 rounded">{errorLogout}</div>
-            )}
-            <p className="mb-4">Apakah Anda yakin ingin logout?</p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={closeLogoutModal}
-                className="px-3 py-1 rounded border border-gray-400 hover:bg-gray-100"
-                disabled={loggingOut}
-              >
-                Batal
-              </button>
-              <button
-                onClick={handleLogoutConfirmed}
-                className="px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700"
-                disabled={loggingOut}
-              >
-                {loggingOut ? "Logout..." : "Logout"}
-              </button>
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-sm shadow-xl">
+                <h2 className="text-lg font-semibold mb-4">Konfirmasi Logout</h2>
+                <p className="mb-6">Apakah Anda yakin ingin keluar dari sesi ini?</p>
+                <div className="flex justify-end gap-3">
+                    <button onClick={() => setShowLogoutModal(false)} className="px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-600 hover:bg-gray-100 dark:hover:bg-slate-700" disabled={loggingOut}>Batal</button>
+                    <button onClick={handleLogout} className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700" disabled={loggingOut}>
+                        {loggingOut ? <ClipLoader color="#ffffff" size={20} /> : "Logout"}
+                    </button>
+                </div>
             </div>
-          </div>
         </div>
       )}
+    </div>
+  );
+}
 
-      <footer className="fixed bottom-0 left-0 w-full bg-indigo-700 dark:bg-gray-900 text-white flex flex-col sm:flex-row items-center justify-center gap-2 py-3 px-4 text-sm sm:text-base text-center sm:text-left shadow-lg z-50">
-        <a
-          href="https://instagram.com/jeyoofficial.store"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 hover:text-pink-400 transition-transform transform hover:scale-110"
-          aria-label="Instagram Jeyo Store"
-        >
-          <FaInstagram className="w-5 h-5 sm:w-6 sm:h-6" />
-          <span className="font-medium">Follow us on Instagram @jeyoofficial.store</span>
-        </a>
-      </footer>
-    </>
+//=================================================================
+// 4. KOMPONEN APP UTAMA
+// (Menggabungkan semuanya)
+//=================================================================
+export default function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          {/* Semua route lain sekarang berada di dalam AppLayout dan dilindungi */}
+          <Route path="/*" element={
+              <ProtectedRoute>
+                  <AppLayout />
+              </ProtectedRoute>
+          } />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
