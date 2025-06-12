@@ -34,7 +34,7 @@ function Notification({ message, type, onClose }) {
   }, [onClose]);
 
   const baseStyle =
-    "fixed top-5 right-5 p-4 rounded-lg shadow-xl text-white z-50 animate-slide-in transition-all duration-300 ease-out"; // Tambah shadow dan transisi
+    "fixed top-5 right-5 p-4 rounded-lg shadow-xl text-white z-50 animate-slide-in transition-all duration-300 ease-out";
   const typeStyle = type === "success" ? "bg-green-500" : "bg-red-500";
 
   return <div className={`${baseStyle} ${typeStyle}`}>{message}</div>;
@@ -560,7 +560,7 @@ Terima kasih telah berbelanja! 🙏`;
       </h1>
 
       {/* Bagian Catat Penjualan Baru */}
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl mb-8 transition-all duration-300"> {/* Lebih rounded dan shadow */}
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl mb-8 transition-all duration-300">
         <h2 className="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-200">
           Catat Penjualan Baru
         </h2>
@@ -667,7 +667,7 @@ Terima kasih telah berbelanja! 🙏`;
       </div>
 
       {/* Tampilan Manajemen Produk */}
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl mb-8 transition-all duration-300"> {/* Lebih rounded dan shadow */}
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl mb-8 transition-all duration-300">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
           <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200">
             Manajemen Produk
@@ -688,8 +688,8 @@ Terima kasih telah berbelanja! 🙏`;
             </label>
           </div>
         </div>
-        {/* Tampilan Tabel untuk Desktop */}
-        <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700"> {/* Tambah border pada tabel */}
+        {/* Tampilan Tabel untuk Desktop (tetap sama) */}
+        <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 hidden md:block">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
@@ -795,7 +795,7 @@ Terima kasih telah berbelanja! 🙏`;
                 ) : (
                   <tr
                     key={product.id}
-                    className={product.isHidden ? "opacity-50" : "hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"} /* Hover effect */
+                    className={product.isHidden ? "opacity-50" : "hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"}
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       {product.name}
@@ -911,12 +911,12 @@ Terima kasih telah berbelanja! 🙏`;
             </tbody>
           </table>
         </div>
-        {/* Tampilan Card untuk Mobile */}
+        {/* Tampilan Card untuk Mobile (diperbaiki) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:hidden">
           {filteredProducts.map((product) => (
             <div
               key={product.id}
-              className={`bg-gray-50 dark:bg-gray-700 p-4 rounded-xl shadow-sm ${product.isHidden ? "opacity-50" : ""} transition-all duration-200`} /* Lebih rounded dan shadow pada card */
+              className={`bg-gray-50 dark:bg-gray-700 p-4 rounded-xl shadow-sm ${product.isHidden ? "opacity-50" : ""} transition-all duration-200 ${editingProductId === product.id ? "border-2 border-yellow-400" : ""}`}
             >
               {editingProductId === product.id ? (
                 <div className="space-y-3">
@@ -987,15 +987,15 @@ Terima kasih telah berbelanja! 🙏`;
                 </div>
               ) : (
                 <>
-                  <div className="flex justify-between items-start">
-                    <h3 className="font-bold text-lg text-gray-800 dark:text-white mb-1">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-bold text-lg text-gray-800 dark:text-white">
                       {product.name}
                     </h3>
                     <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full dark:bg-indigo-900 dark:text-indigo-300">
-                      {product.category || "N/A"}
+                      {capitalizeForDisplay(product.category) || "N/A"}
                     </span>
                   </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-300 space-y-2 mt-2">
+                  <div className="text-sm text-gray-600 dark:text-gray-300 space-y-2">
                     <div className="flex items-center justify-between">
                       <p>
                         <strong>Stok:</strong> {product.stock}
@@ -1037,7 +1037,7 @@ Terima kasih telah berbelanja! 🙏`;
                       <strong>Harga:</strong> {formatRupiah(product.price)}
                     </p>
                     {product.lastStockAddedAt && (
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         <strong>Update:</strong>{" "}
                         {formatTimestamp(product.lastStockAddedAt)}
                         {product.lastStockAddedQty && (
@@ -1098,15 +1098,15 @@ Terima kasih telah berbelanja! 🙏`;
       </div>
 
       {/* Tampilan Riwayat Penjualan */}
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl transition-all duration-300"> {/* Lebih rounded dan shadow */}
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl transition-all duration-300">
         <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-4">
           <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200">
             Riwayat Penjualan
           </h2>
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto"> {/* Make filters stack on mobile */}
             {/* Filter Waktu */}
             <select
-              className="border border-gray-300 p-2 rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+              className="border border-gray-300 p-2 rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:ring-indigo-500 focus:border-indigo-500 transition-colors w-full sm:w-auto"
               value={timeFilter}
               onChange={(e) => setTimeFilter(e.target.value)}
             >
@@ -1117,7 +1117,7 @@ Terima kasih telah berbelanja! 🙏`;
 
             {/* Filter Kategori Pembeli */}
             <select
-              className="border border-gray-300 p-2 rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+              className="border border-gray-300 p-2 rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:ring-indigo-500 focus:border-indigo-500 transition-colors w-full sm:w-auto"
               value={customerTypeFilter}
               onChange={(e) => setCustomerTypeFilter(e.target.value)}
             >
@@ -1128,7 +1128,7 @@ Terima kasih telah berbelanja! 🙏`;
 
             {/* Filter Kategori Produk */}
             <select
-              className="border border-gray-300 p-2 rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+              className="border border-gray-300 p-2 rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 focus:ring-indigo-500 focus:border-indigo-500 transition-colors w-full sm:w-auto"
               value={productCategoryFilter}
               onChange={(e) => setProductCategoryFilter(e.target.value)}
             >
@@ -1140,7 +1140,7 @@ Terima kasih telah berbelanja! 🙏`;
             </select>
           </div>
         </div>
-        <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700"> {/* Tambah border pada tabel */}
+        <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 hidden md:block">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
@@ -1179,7 +1179,7 @@ Terima kasih telah berbelanja! 🙏`;
                     className={
                       editingSaleId === sale.id
                         ? "bg-yellow-50 dark:bg-yellow-900/20 transition-colors duration-200"
-                        : "hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150" /* Hover effect */
+                        : "hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
                     }
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -1310,7 +1310,7 @@ Terima kasih telah berbelanja! 🙏`;
             </tbody>
           </table>
         </div>
-        {/* Tampilan Card untuk Mobile */}
+        {/* Tampilan Card untuk Mobile (diperbaiki) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:hidden">
           {sales.map((sale) => {
             const product = products.find((p) => p.id === sale.productId);
@@ -1321,9 +1321,14 @@ Terima kasih telah berbelanja! 🙏`;
                   editingSaleId === sale.id ? "border-2 border-yellow-400" : ""
                 } transition-all duration-200`}
               >
-                <h3 className="font-bold text-lg text-gray-800 dark:text-white mb-2">
-                  {sale.productName || (product ? product.name : "Produk Dihapus")}
-                </h3>
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="font-bold text-lg text-gray-800 dark:text-white">
+                    {sale.productName || (product ? product.name : "Produk Dihapus")}
+                  </h3>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    {formatTimestamp(sale.soldAt)}
+                  </span>
+                </div>
                 <div className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
                   <p>
                     <strong>Kategori Produk:</strong>{" "}
@@ -1351,7 +1356,7 @@ Terima kasih telah berbelanja! 🙏`;
                   <p>
                     <strong>Jumlah:</strong> {sale.qty}
                   </p>
-                  <p>
+                  <p className="text-lg font-semibold text-gray-800 dark:text-white">
                     <strong>Total:</strong>{" "}
                     {formatRupiah(sale.qty * (sale.price || product?.price || 0))}
                   </p>
@@ -1392,9 +1397,6 @@ Terima kasih telah berbelanja! 🙏`;
                     ) : (
                       capitalizeForDisplay(sale.customerType) || "Non-Reseller"
                     )}
-                  </p>
-                  <p>
-                    <strong>Tanggal:</strong> {formatTimestamp(sale.soldAt)}
                   </p>
                 </div>
                 <div className="flex justify-end items-center gap-3 mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
@@ -1459,7 +1461,7 @@ Terima kasih telah berbelanja! 🙏`;
       {/* Modal Detail Produk */}
       {modalDetail.isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-xl relative transition-all duration-300"> {/* Lebih rounded dan shadow */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-xl relative transition-all duration-300">
             <button
               onClick={() => setModalDetail({ isOpen: false, product: null })}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
@@ -1507,7 +1509,7 @@ Terima kasih telah berbelanja! 🙏`;
       {/* Modal Invoice/Struk */}
       {modalInvoice.isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-sm w-full shadow-xl relative transition-all duration-300"> {/* Lebih rounded dan shadow */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-sm w-full shadow-xl relative transition-all duration-300">
             <button
               onClick={() =>
                 setModalInvoice({ isOpen: false, saleDetails: null })
@@ -1572,7 +1574,7 @@ Terima kasih telah berbelanja! 🙏`;
       {/* Modal Konfirmasi Hapus */}
       {modalDelete.isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-sm w-full shadow-xl transition-all duration-300"> {/* Lebih rounded dan shadow */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-sm w-full shadow-xl transition-all duration-300">
             <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">
               Konfirmasi Hapus
             </h3>
