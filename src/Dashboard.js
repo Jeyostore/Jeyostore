@@ -83,11 +83,11 @@ export default function Dashboard() {
   const capitalizeForDisplay = useCallback((string) => {
     if (!string) return "";
     const lowerString = string.toLowerCase();
+    // Normalisasi spesifik untuk tipe customer
     if (lowerString === "non-reseller") return "Non-Reseller";
     if (lowerString === "reseller") return "Reseller";
-    if (lowerString.includes("makaroni")) return "Makaroni";
-    if (lowerString.includes("mie lidi")) return "Mie Lidi";
-
+    
+    // Hanya membuat huruf pertama kapital untuk string lain (nama produk, kategori, dll)
     return lowerString.charAt(0).toUpperCase() + lowerString.slice(1);
   }, []);
 
